@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Database
+*.db
+*.sqlite
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Test
+coverage/
+.nyc_output/
+
+# Turbo
+.turbo/
+
+# Prisma
+packages/db/prisma/*.db
+packages/db/prisma/*.db-journal
+
+# Docker
+infrastructure/docker/.env
+infrastructure/docker/ssl/
+
+# Kubernetes secrets
+infrastructure/k8s/**/*secret*
+infrastructure/k8s/**/*credentials*
+kubeconfig.yaml

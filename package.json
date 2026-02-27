@@ -1,0 +1,44 @@
+{
+  "name": "agentmesh",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Enterprise AI Agent Swarm ↔ Bot Network Bridge — connect agent swarms to thousands of real platform bots",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packages/adapters/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:generate": "cd packages/db && npx prisma generate",
+    "db:migrate": "cd packages/db && npx prisma migrate dev",
+    "db:studio": "cd packages/db && npx prisma studio",
+    "docker:up": "docker compose -f infrastructure/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infrastructure/docker/docker-compose.yml down",
+    "k8s:apply": "kubectl apply -k infrastructure/k8s/",
+    "agents:start": "node scripts/start-agents.js",
+    "registry:seed": "ts-node scripts/seed-registry.ts"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.0.0",
+    "prettier": "^3.2.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "vitest": "^1.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

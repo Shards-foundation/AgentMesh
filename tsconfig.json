@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@agentmesh/types": ["packages/core/types/src"],
+      "@agentmesh/utils": ["packages/core/utils/src"],
+      "@agentmesh/logger": ["packages/core/logger/src"],
+      "@agentmesh/config": ["packages/core/config/src"],
+      "@agentmesh/errors": ["packages/core/errors/src"],
+      "@agentmesh/db": ["packages/db/prisma/src"],
+      "@agentmesh/auth": ["packages/auth/src"],
+      "@agentmesh/messaging": ["packages/messaging/router/src"],
+      "@agentmesh/agent-base": ["packages/agent/base/src"],
+      "@agentmesh/swarm": ["packages/agent/swarm/src"],
+      "@agentmesh/adapter-telegram": ["packages/adapters/telegram/src"],
+      "@agentmesh/adapter-discord": ["packages/adapters/discord/src"],
+      "@agentmesh/adapter-slack": ["packages/adapters/slack/src"],
+      "@agentmesh/adapter-whatsapp": ["packages/adapters/whatsapp/src"],
+      "@agentmesh/adapter-twitter": ["packages/adapters/twitter/src"],
+      "@agentmesh/monitoring": ["packages/monitoring/src"]
+    }
+  },
+  "exclude": ["node_modules"]
+}

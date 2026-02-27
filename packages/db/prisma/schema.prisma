@@ -1,0 +1,270 @@
+// AgentMesh Database Schema
+// Postgres via Prisma ORM
+// Sunil Singh — Shards Inc
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Workspaces (multi-tenant) ──────────────────────────────────────────────
+
+model Workspace {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  apiKey      String   @unique @default(cuid())
+  plan        String   @default("free") // free | pro | enterprise
+  maxBots     Int      @default(10)
+  maxAgents   Int      @default(5)
+  maxSwarms   Int      @default(2)
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bots     BotInstance[]
+  agents   AgentConfig[]
+  swarms   SwarmConfig[]
+  apiUsage ApiUsageLog[]
+
+  @@map("workspaces")
+}
+
+// ── Bot Instances ──────────────────────────────────────────────────────────
+
+model BotInstance {
+  id               String   @id @default(cuid())
+  workspaceId      String
+  platformId       String   // telegram | discord | slack | whatsapp | etc.
+  name             String
+  username         String
+  status           String   @default("initializing")
+  credentialsEnc   Bytes    // AES-256-GCM encrypted credentials
+  metadata         Json     @default("{}")
+  assignedAgentId  String?
+  swarmId          String?
+  healthScore      Int      @default(100)
+  messagesProcessed BigInt  @default(0)
+  lastHeartbeat    DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  workspace       Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignedAgent   AgentConfig?       @relation(fields: [assignedAgentId], references: [id])
+  swarm           SwarmConfig?       @relation(fields: [swarmId], references: [id])
+  messages        MessageLog[]
+  healthHistory   BotHealthLog[]
+
+  @@index([workspaceId, platformId])
+  @@index([status])
+  @@index([swarmId])
+  @@map("bot_instances")
+}
+
+model BotHealthLog {
+  id          String   @id @default(cuid())
+  botId       String
+  healthScore Int
+  status      String
+  metadata    Json     @default("{}")
+  timestamp   DateTime @default(now())
+
+  bot BotInstance @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@index([botId, timestamp])
+  @@map("bot_health_logs")
+}
+
+// ── Agents ─────────────────────────────────────────────────────────────────
+
+model AgentConfig {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  name          String
+  role          String   // orchestrator | executor | analyst | etc.
+  description   String   @default("")
+  systemPrompt  String   @db.Text
+  modelProvider String   // anthropic | openai | google | groq
+  modelId       String   // claude-sonnet-4-5 | gpt-4o | etc.
+  modelConfig   Json     @default("{}")   // temperature, maxTokens, etc.
+  tools         Json     @default("[]")  // Array of AgentTool
+  memoryConfig  Json     @default("{}")
+  routingConfig Json     @default("{}")
+  rateLimits    Json     @default("{}")
+  capabilities  Json     @default("{}")
+  metadata      Json     @default("{}")
+  isTemplate    Boolean  @default(false) // Swarm agent templates
+  enabled       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  bots         BotInstance[]
+  swarmAgents  SwarmAgent[]
+  executions   AgentExecution[]
+
+  @@index([workspaceId, role])
+  @@map("agent_configs")
+}
+
+model AgentExecution {
+  id              String   @id @default(cuid())
+  agentId         String
+  messageId       String
+  inputTokens     Int      @default(0)
+  outputTokens    Int      @default(0)
+  latencyMs       Int      @default(0)
+  finishReason    String   @default("stop")
+  error           String?
+  timestamp       DateTime @default(now())
+
+  agent AgentConfig @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId, timestamp])
+  @@map("agent_executions")
+}
+
+// ── Swarms ─────────────────────────────────────────────────────────────────
+
+model SwarmConfig {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  name              String
+  description       String   @default("")
+  topology          String   // star | mesh | hierarchical | pipeline | broadcast
+  minAgents         Int      @default(1)
+  maxAgents         Int      @default(10)
+  orchestratorAgentId String?
+  botAssignment     Json     @default("{}")
+  scaling           Json     @default("{}")
+  communication     Json     @default("{}")
+  goals             Json     @default("[]")
+  metadata          Json     @default("{}")
+  enabled           Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  bots      BotInstance[]
+  agents    SwarmAgent[]
+  metrics   SwarmMetricsLog[]
+
+  @@index([workspaceId])
+  @@map("swarm_configs")
+}
+
+model SwarmAgent {
+  swarmId   String
+  agentId   String
+  role      String   @default("executor")
+  priority  Int      @default(5)
+  addedAt   DateTime @default(now())
+
+  swarm SwarmConfig @relation(fields: [swarmId], references: [id], onDelete: Cascade)
+  agent AgentConfig @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@id([swarmId, agentId])
+  @@map("swarm_agents")
+}
+
+model SwarmMetricsLog {
+  id                    String   @id @default(cuid())
+  swarmId               String
+  totalMessages         BigInt   @default(0)
+  totalTokens           BigInt   @default(0)
+  avgResponseTimeMs     Float    @default(0)
+  errorRate             Float    @default(0)
+  activeConversations   Int      @default(0)
+  botsOnline            Int      @default(0)
+  agentsUtilisation     Float    @default(0)
+  timestamp             DateTime @default(now())
+
+  swarm SwarmConfig @relation(fields: [swarmId], references: [id], onDelete: Cascade)
+
+  @@index([swarmId, timestamp])
+  @@map("swarm_metrics_logs")
+}
+
+// ── Messages ───────────────────────────────────────────────────────────────
+
+model MessageLog {
+  id                String   @id @default(cuid())
+  botId             String
+  platformId        String
+  direction         String   // inbound | outbound
+  messageType       String   // text | image | audio | etc.
+  contentHash       String   // SHA-256 of content (for dedup)
+  senderPlatformId  String
+  chatPlatformId    String
+  agentId           String?
+  swarmId           String?
+  tokensUsed        Int      @default(0)
+  processingMs      Int      @default(0)
+  hasError          Boolean  @default(false)
+  errorMessage      String?
+  platformMsgId     String
+  timestamp         DateTime @default(now())
+
+  bot BotInstance @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@index([botId, timestamp])
+  @@index([chatPlatformId, timestamp])
+  @@index([agentId, timestamp])
+  @@map("message_logs")
+}
+
+// ── Routing Rules ──────────────────────────────────────────────────────────
+
+model RoutingRule {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  priority    Int      @default(5)
+  conditions  Json     @default("[]")  // Array of RoutingCondition
+  action      Json     @default("{}")  // RoutingAction
+  enabled     Boolean  @default(true)
+  hitCount    BigInt   @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([workspaceId, priority])
+  @@map("routing_rules")
+}
+
+// ── API Usage ──────────────────────────────────────────────────────────────
+
+model ApiUsageLog {
+  id          String   @id @default(cuid())
+  workspaceId String
+  endpoint    String
+  method      String
+  statusCode  Int
+  latencyMs   Int
+  requestId   String   @unique
+  timestamp   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, timestamp])
+  @@map("api_usage_logs")
+}
+
+// ── System Events ──────────────────────────────────────────────────────────
+
+model SystemEventLog {
+  id          String   @id @default(cuid())
+  eventType   String
+  source      String
+  sourceId    String
+  payload     Json     @default("{}")
+  workspaceId String?
+  timestamp   DateTime @default(now())
+
+  @@index([eventType, timestamp])
+  @@index([sourceId, timestamp])
+  @@map("system_event_logs")
+}
